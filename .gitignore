@@ -1,0 +1,7 @@
+# tools downloaded by setup-tools.ps1
+/_tools/
+
+# build output
+/CasaOS-Windows/dist/
+*.syso
+*.exe

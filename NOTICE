@@ -1,0 +1,20 @@
+CasaOS per Windows
+Porting non ufficiale, senza legami con IceWhale Technology.
+
+Questo prodotto deriva da CasaOS e dai suoi componenti di IceWhale Technology,
+distribuiti con licenza Apache 2.0:
+https://github.com/IceWhaleTech
+
+Modifiche rispetto agli originali, ai sensi della sezione 4 della licenza:
+
+- CasaOS, CasaOS-Common, CasaOS-Gateway, CasaOS-MessageBus, CasaOS-UserService,
+  CasaOS-LocalStorage e CasaOS-AppManagement sono stati modificati per funzionare
+  su Windows. I file modificati sono quelli che differiscono dai commit elencati
+  nel README, e i file che finiscono in _windows.go o _other.go sono nuovi o
+  ricavati da quelli originali.
+- CasaOS-Windows e CasaOS-Common/utils/vfs sono stati scritti per questo porting.
+- Le credenziali OAuth di Google, Dropbox e GitHub integrate nei sorgenti originali
+  sono state rimosse. Le funzioni che le usavano non sono disponibili su Windows.
+
+La dashboard incorporata nell'installer è la release v0.4.25 di CasaOS-UI, non
+modificata, anch'essa di IceWhale Technology con licenza Apache 2.0.
