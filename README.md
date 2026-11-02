@@ -24,7 +24,7 @@ Questo progetto nasce per **portare CasaOS su Windows** con una filosofia adatta
 CasaOS non è un singolo eseguibile monolitico, ma un'architettura a **6 microservizi in Go** più una **dashboard web (`CasaOS-UI`)**. Questo repository raccoglie l'intero codice sorgente in un unico monorepo strutturato così:
 
 ```text
-├── CasaOS-Windows/          #Scritto da zero per Windows: launcher GUI Win32, script di build e installer Inno Setup
+├── CasaOS-Windows/          # Scritto da zero per Windows: launcher GUI Win32, script di build e installer Inno Setup
 │   ├── launcher/            # Codice sorgente di CasaOS.exe (GUI nativa, supervisore servizi, integrazione Docker)
 │   ├── installer/           # Script Inno Setup (casaos.iss) per generare CasaOS-Setup-<versione>.exe
 │   ├── setup-tools.ps1      # Scarica in modo portatile Go, Inno Setup e la release di CasaOS-UI
@@ -61,7 +61,7 @@ flowchart TD
 ### 1. Il Launcher e Supervisore Nativo (`CasaOS-Windows/launcher`)
 Su Linux l'avvio ordinato dei servizi e il loro riavvio in caso di crash sono affidati a `systemd`. Su Windows questo ruolo è svolto da `CasaOS.exe`:
 - **Interfaccia grafica nativa Win32 (`ui.go`, `win32.go`, `i18n.go`):** scritta interamente in Go chiamando direttamente le DLL di sistema (`user32.dll`, `gdi32.dll`, `gdiplus.dll`, `dwmapi.dll`, `shell32.dll`). Non richiede WebView, Electron o runtime esterni. Supporta tema chiaro/scuro automatico da registro di Windows, scaling HiDPI (`PerMonitorV2`), icona nella System Tray e localizzazione Italiano/Inglese.
-- **Orchestrazione sequenziale (`server.go`):** avvia i 6 servizi nell'ordine esatto delle dipendenze (`casaos-gateway` $\rightarrow$ `casaos-message-bus` $\rightarrow$ `casaos-user-service` $\rightarrow$ `casaos` $\rightarrow$ `casaos-local-storage` $\rightarrow$ `casaos-app-management`). Per ciascun servizio attende che venga scritto il relativo file `.url` nella cartella runtime (`/var/run/casaos`), verifica la risposta HTTP del gateway e registra gli eventi della UI (`ui-message-bus.json`).
+- **Orchestrazione sequenziale (`server.go`):** avvia i 6 servizi nell'ordine esatto delle dipendenze (`casaos-gateway` → `casaos-message-bus` → `casaos-user-service` → `casaos` → `casaos-local-storage` → `casaos-app-management`). Per ciascun servizio attende che venga scritto il relativo file `.url` nella cartella runtime (`/var/run/casaos`), verifica la risposta HTTP del gateway e registra gli eventi della UI (`ui-message-bus.json`).
 - **Isolamento con Windows Job Object (`newKillOnCloseJob`):** tutti i processi figli vengono assegnati a un *Job Object* di Windows configurato con `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`. Se il launcher viene chiuso o termina in modo anomalo, il kernel di Windows termina istantaneamente tutti i microservizi, garantendo che non restino mai processi orfani in background.
 - **Auto-healing e gestione porta occupata:** se un microservizio termina inaspettatamente mentre il server è attivo, il launcher lo riavvia automaticamente (fino a 5 volte in 2 minuti, dopodiché segnala l'errore e ferma il server). Prima dell'avvio controlla anche se la porta salvata in `gateway.ini` (es. la porta 80) è stata occupata da un altro programma Windows: in tal caso la libera nella configurazione così il gateway ne sceglie automaticamente una libera.
 - **Rilevamento blocco Antivirus (`suspended.go`):** al primo avvio di eseguibili non firmati, gli antivirus (es. Norton 360, Windows Defender) possono congelare temporaneamente il processo per analizzarlo. Tramite la syscall nativa `NtQuerySystemInformation(SystemProcessInformation)`, il launcher ispeziona lo stato dei thread di ogni servizio: se rileva che tutti i thread di un servizio sono sospesi (`waitReasonSuspended`), non dichiara timeout ma mostra un avviso all'utente e attende che l'antivirus completi la scansione.
@@ -75,9 +75,9 @@ Le app di CasaOS sono container Linux gestiti tramite Docker Compose:
 ### 3. Il Virtual File System (`CasaOS-Common/utils/vfs`)
 Il codice originale di CasaOS e la dashboard web usano ovunque percorsi POSIX cablati (`/DATA`, `/var/lib/casaos`, `/etc/casaos`, `/media/...`). Per non dover riscrivere la dashboard web né rompere le API REST, è stato creato il pacchetto [`CasaOS-Common/utils/vfs`](CasaOS-Common/utils/vfs):
 - `vfs.Real(path)` converte al volo i percorsi virtuali di CasaOS nei percorsi reali di Windows:
-  - `/DATA/...` $\rightarrow$ `%CASAOS_DATA%` (scelta nell'installer, di default `%USERPROFILE%\CasaOS`)
-  - `/media/C/...`, `/media/D/...` $\rightarrow$ `C:\...`, `D:\...` (tutte le unità disco rilevate da `GetLogicalDrives()`)
-  - `/etc/casaos`, `/var/lib/casaos`, `/var/log/casaos`, `/var/run/casaos` $\rightarrow$ `%CASAOS_ROOT%\...` (di default `%LOCALAPPDATA%\CasaOS\root\...`)
+  - `/DATA/...` → `%CASAOS_DATA%` (scelta nell'installer, di default `%USERPROFILE%\CasaOS`)
+  - `/media/C/...`, `/media/D/...` → `C:\...`, `D:\...` (tutte le unità disco rilevate da `GetLogicalDrives()`)
+  - `/etc/casaos`, `/var/lib/casaos`, `/var/log/casaos`, `/var/run/casaos` → `%CASAOS_ROOT%\...` (di default `%LOCALAPPDATA%\CasaOS\root\...`)
 - `vfs.Virtual(path)` esegue la conversione inversa prima di restituire i percorsi nelle risposte JSON alla dashboard.
 - `vfs.SocketPath(path)` gestisce il limite di 108 byte dei socket Unix su Windows, generando un percorso breve in `%TEMP%` se il nome utente di Windows rende il percorso troppo lungo.
 
@@ -88,7 +88,7 @@ Il codice originale di CasaOS e la dashboard web usano ovunque percorsi POSIX ca
 | `systemd` / `systemctl` (`CasaOS-Common`) | Riscritto in [`systemctl_windows.go`](CasaOS-Common/utils/systemctl/systemctl_windows.go) ispezionando i processi attivi tramite `CreateToolhelp32Snapshot`. |
 | `/proc/net/{tcp,udp}` (`CasaOS-Common`) | Riscritto in [`ports_in_use_windows.go`](CasaOS-Common/utils/port/ports_in_use_windows.go) interrogando le tabelle TCP/UDP IPv4 e IPv6 tramite `iphlpapi.dll` (`GetExtendedTcpTable` e `GetExtendedUdpTable`). |
 | Script bash di rete (`CasaOS`) | Sostituiti in [`system_windows.go`](CasaOS/service/system_windows.go) con `gopsutil` e filtro automatico delle schede virtuali (WSL, Hyper-V, Docker, VPN, loopback). |
-| `/etc/localtime` (`CasaOS-Common`) | Sostituito in [`utils_windows.go`](CasaOS-Common/utils/time/utils_windows.go) leggendo `TimeZoneKeyName` dal Registro di Windows e convertendolo nel formato IANA (es. `W. Europe Standard Time` $\rightarrow$ `Europe/Berlin`) richiesto dai container Docker. |
+| `/etc/localtime` (`CasaOS-Common`) | Sostituito in [`utils_windows.go`](CasaOS-Common/utils/time/utils_windows.go) leggendo `TimeZoneKeyName` dal Registro di Windows e convertendolo nel formato IANA (es. `W. Europe Standard Time` → `Europe/Berlin`) richiesto dai container Docker. |
 | Socket e uevent kernel (`CasaOS-LocalStorage`) | Disaccoppiato il listener Netlink KObject uevent del kernel Linux tramite build tag (`misc_windows.go`, `message_uevent.go`). |
 
 ### 5. Sicurezza e bug corretti rispetto al codice originale
@@ -116,7 +116,7 @@ Il codice originale di CasaOS e la dashboard web usano ovunque percorsi POSIX ca
 
 > [!NOTE]
 > Gli eseguibili **non sono firmati con un certificato Authenticode a pagamento**:
-> - **Windows SmartScreen** può mostrare l'avviso *"Windows ha protetto il PC"*: clicca su *Ulteriori informazioni* $\rightarrow$ *Esegui comunque*.
+> - **Windows SmartScreen** può mostrare l'avviso *"Windows ha protetto il PC"*: clicca su *Ulteriori informazioni* → *Esegui comunque*.
 > - L'**Antivirus** può sospendere i 6 servizi per alcuni secondi al primo avvio per analizzarli: il launcher lo rileva automaticamente e attende il completamento.
 > - Il **Firewall di Windows** può chiedere il permesso di rete: consenti l'accesso sulle reti private se vuoi aprire la dashboard anche da smartphone o altri PC di casa.
 
