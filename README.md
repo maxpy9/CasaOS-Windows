@@ -92,9 +92,10 @@ Il codice originale di CasaOS e la dashboard web usano ovunque percorsi POSIX ca
 | Socket e uevent kernel (`CasaOS-LocalStorage`) | Disaccoppiato il listener Netlink KObject uevent del kernel Linux tramite build tag (`misc_windows.go`, `message_uevent.go`). |
 
 ### 5. Sicurezza e bug corretti rispetto al codice originale
-- **Autenticazione obbligatoria per i browser in locale (`CasaOS-Gateway/route/gateway_route.go`):** i microservizi di CasaOS comunicano tra loro su `127.0.0.1` senza token, perciò il gateway originale lascia passare senza login qualsiasi richiesta proveniente da localhost. Su un PC desktop questo permetterebbe a qualsiasi pagina web aperta nel browser di invocare `http://localhost` (CSRF/DNS rebinding) e leggere i file del PC. In questo porting il gateway controlla gli header `Origin`, `Sec-Fetch-Site` e `User-Agent`: se la richiesta proviene da un browser, richiede sempre il token JWT di login anche da `127.0.0.1`.
+- **Autenticazione obbligatoria per i browser in locale (`CasaOS-Gateway/route/gateway_route.go`):** i microservizi di CasaOS comunicano tra loro su `127.0.0.1` senza token, perciò il gateway originale lascia passare senza login qualsiasi richiesta proveniente da localhost. Su un PC desktop questo permetterebbe a qualsiasi pagina web aperta nel browser di invocare `http://localhost` (CSRF/DNS rebinding) e leggere i file del PC. In questo porting il gateway tratta come remota ogni richiesta il cui `User-Agent` inizia con `Mozilla/`, cioè quelle dei browser: devono sempre portare il token JWT di login, anche da `127.0.0.1`. Il controllo vale per i browser, non per gli altri programmi in esecuzione sul PC, che restano considerati locali come nell'originale.
 - **Protezione delle radici nel File Manager (`CasaOS/service/system_windows.go`):** impedita l'eliminazione, la rinomina o lo spostamento accidentale di `/`, `/DATA`, `/media` e delle radici dei dischi (`/media/C`, `/media/D`, ecc.).
-- **Rimozione credenziali OAuth integrate (`NOTICE`):** i sorgenti upstream contenevano client ID e client secret OAuth cablati per Google Drive e Dropbox (funzionalità che su Linux usano FUSE e non sono attive su Windows). Sono stati rimossi dal codice.
+- **Accesso ai dischi dalla rete:** chi ha il tuo account può sfogliare tutti i dischi del PC dalla dashboard. Usa una password robusta e non esporre la porta su Internet.
+- **Rimozione credenziali OAuth integrate (`NOTICE`):** i sorgenti upstream contenevano credenziali OAuth cablate per Google Drive, Dropbox e GitHub, usate da funzioni che su Windows non sono attive. Sono state rimosse dal codice. Per usare quelle funzioni in una build derivata servono credenziali proprie.
 - **Correzioni di bug upstream:**
   - Corretto in `CasaOS/model/net.go` un cast `unsafe` tra `net.IOCountersStat` di `gopsutil` e una struct locale più lunga, che causava letture di memoria fuori limite e crash su Windows.
   - Aggiunta la chiusura esplicita dei file (`defer f.Close()`) nel file manager e nelle immagini profilo: a differenza di Linux, Windows blocca la rinomina e la cancellazione dei file lasciati aperti.
@@ -144,7 +145,8 @@ Il codice originale di CasaOS e la dashboard web usano ovunque percorsi POSIX ca
 
 ## Cosa funziona e limitazioni note
 
-- **Funzionano completamente:** Dashboard e widget di sistema (CPU, RAM, dischi, rete), creazione account e login, File Manager completo (esplorazione di `/DATA` e di tutti i dischi `C:`, `D:`, upload, download, anteprime immagini/video/testo, compressione zip, copia/incolla), App Store e gestione dei container tramite Docker Desktop.
+- **Funzionano:** Dashboard e widget di sistema (CPU, RAM, dischi, rete), creazione account e login, File Manager (esplorazione di `/DATA` e di tutti i dischi `C:`, `D:`, upload, download, anteprime, compressione zip, copia e spostamento) e catalogo dell'App Store.
+- **Installazione delle app:** il codice per installarle e gestirle tramite Docker Desktop è presente, ma l'installazione reale di un'app non è ancora stata provata (vedi [Cosa è stato verificato](#cosa-è-stato-verificato)).
 - **Limitazioni legate a Docker Desktop:** i container girano nella macchina virtuale Linux di Docker Desktop; le app che richiedono `network_mode: host`, schede di rete fisiche o il passthrough diretto di dispositivi hardware Linux (`/dev/dri`, ecc.) hanno le normali limitazioni di Docker Desktop su Windows.
 - **Funzioni solo-Linux disabilitate:**
   - Condivisioni Samba native e montaggio di cartelle di rete CIFS/SMB da CasaOS
@@ -153,6 +155,22 @@ Il codice originale di CasaOS e la dashboard web usano ovunque percorsi POSIX ca
   - Dati S.M.A.R.T. (`smartctl`), temperatura e potenza CPU (mostrano `0`)
   - Aggiornamento automatico dalla dashboard (i pacchetti di update ufficiali sono binari Linux)
   - Il terminale SSH integrato nella dashboard richiede che su Windows sia attivo il server *OpenSSH Server*.
+
+### Cosa è stato verificato
+
+I test sono stati fatti su un solo PC, con Windows 11 e Norton 360:
+
+- installazione dalle schermate e avvio della dashboard
+- avvii e arresti ripetuti del server
+- login, file manager, catalogo dell'App Store
+- avvio e arresto di Docker Desktop insieme al server
+- disinstallazione, in un ambiente di test
+
+**Non ancora verificati:**
+
+- l'installazione reale di un'app dall'App Store, dal download dell'immagine all'avvio del container
+- l'accesso alla dashboard da un altro dispositivo della rete
+- Windows 10, altre versioni di Windows 11 e altri antivirus
 
 ---
 
